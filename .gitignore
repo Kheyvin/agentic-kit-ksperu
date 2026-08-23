@@ -1,0 +1,10 @@
+.env.local
+.env.*.local
+config/jwt/*.pem
+node_modules/
+vendor/
+var/
+dist/
+test-results/
+playwright-report/
+.codex/

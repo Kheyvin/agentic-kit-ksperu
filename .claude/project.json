@@ -1,0 +1,9 @@
+{
+  "_comentario": "Configuración por proyecto. 'auto' detecta el layout leyendo el disco. Ajusta solo si tu estructura es inusual.",
+  "layout": "auto",
+  "backend_dir": "auto",
+  "frontend_dir": "auto",
+  "app_type": "system",
+  "ci": "ninguno",
+  "deploy": "sin_definir"
+}

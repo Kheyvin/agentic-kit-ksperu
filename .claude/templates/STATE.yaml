@@ -1,0 +1,54 @@
+# Estado del proyecto — ÚNICA fuente de verdad.
+# Ningún agente responde "cómo vamos" de memoria: lo lee de aquí.
+
+proyecto:
+  nombre:
+  fase: discovery          # discovery | plan | build | audit | qa | release
+  layout: auto             # monorepo | plano | solo-backend | solo-frontend | repos-separados
+  app_type: system         # system | landing  (decide si GSAP existe)
+  actualizado:
+
+infra:
+  ci: ninguno              # ninguno | github-actions | gitlab-ci
+  deploy: sin_definir      # sin_definir | vps-docker | paas | hosting-compartido
+  # Mientras 'ci' sea 'ninguno', los gates corren por hook en local: hay red, no CI.
+  # Mientras 'deploy' sea 'sin_definir', el agente devops NO propone infraestructura.
+
+contrato:
+  version: 1
+  archivo: docs/CONTRACT.md
+  lock: docs/.contract.lock   # si hay repos separados, debe coincidir en ambos
+  ultimo_cambio:
+
+historias: []
+# - id: STORY-001
+#   titulo: Listado de productos
+#   estado: en_curso
+#   tareas: [TASK-012, TASK-014]
+
+tareas: []
+# - id: TASK-014
+#   titulo: Endpoint GET /api/products con filtros
+#   agente: backend-developer
+#   estado: en_curso        # pendiente | en_curso | en_auditoria | bloqueada | hecha
+#   depende_de: [TASK-012]
+#   auditoria: docs/audits/AUDIT-003.md
+#   veredicto: aprobado
+
+bloqueos: []
+# - tarea: TASK-018
+#   motivo: "Falta decidir si el borrado es lógico o físico"
+#   necesita: decisión humana
+
+deuda: []
+# - descripcion: "ProductService supera 200 líneas, mezcla precios e inventario"
+#   origen: TASK-014
+#   prioridad: media
+
+decisiones_pendientes:
+  - pregunta: "¿Qué CI se usará para ejecutar los gates?"
+    bloquea: []
+    nota: "No urgente. Los hooks ya corren los gates en local. Plantillas listas en .claude/templates/ci/."
+  - pregunta: "¿Dónde se despliega este proyecto?"
+    bloquea: []
+    nota: "Hasta decidirlo, devops no propone infraestructura. Condiciona Docker, variables y runbook."

@@ -1,0 +1,31 @@
+id: STORY-XXX
+titulo:
+actor:
+quiero:
+para:
+prioridad: media           # alta | media | baja
+estado: borrador           # borrador | acordada | en_curso | hecha | descartada
+valor: ""
+
+criterios:
+  - id: AC-1
+    dado:
+    cuando:
+    entonces:
+  - id: AC-2
+    dado:
+    cuando:
+    entonces:
+
+fuera_de_alcance:
+  - 
+
+reglas_de_negocio:
+  - 
+
+contrato_afectado:
+  - 
+
+tareas: []
+mockup:
+e2e:
