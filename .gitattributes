@@ -1,0 +1,36 @@
+# Los scripts del kit son bash y SIEMPRE deben viajar con finales de línea LF.
+#
+# En Windows, `core.autocrlf=true` (el valor por defecto de Git for Windows)
+# convierte a CRLF al hacer checkout. Git Bash lo tolera, pero WSL, Linux, macOS
+# y cualquier contenedor no: un script con CRLF falla con
+# `$'\r': command not found` — y si el que falla es paths.sh, los gates se omiten
+# y todo parece verde sin haber comprobado nada.
+*.sh text eol=lf
+
+# El resto de archivos del kit, normalizados a LF también: los leen los agentes y
+# se comparan por hash (docs/contracts/*.lock), así que un CRLF colado cambiaría
+# el hash sin que cambiara el contenido.
+*.md       text eol=lf
+*.yaml     text eol=lf
+*.yml      text eol=lf
+*.json     text eol=lf
+
+# Código del proyecto que se genere dentro del repositorio.
+*.php      text eol=lf
+*.vue      text eol=lf
+*.js       text eol=lf
+*.css      text eol=lf
+*.lock     text eol=lf
+
+# Binarios: que Git no toque nada.
+*.png      binary
+*.jpg      binary
+*.jpeg     binary
+*.gif      binary
+*.webp     binary
+*.ico      binary
+*.woff     binary
+*.woff2    binary
+*.pdf      binary
+*.db       binary
+*.sqlite   binary
