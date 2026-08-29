@@ -16,8 +16,8 @@ no bloquea la tarea.
 | **MAYOR** | Bug probable en un caso borde real, o deuda que costará caro revertir | Se arregla en esta tarea salvo justificación escrita |
 | **MENOR** | Estilo, nombres, duplicación tolerable | Se anota, no bloquea |
 
-Si dudas entre BLOQUEANTE y MAYOR: ¿se puede desplegar esto sin riesgo de pérdida o fuga de
-datos? Si sí, es MAYOR.
+Si dudas entre BLOQUEANTE y MAYOR: ¿puede esto perder datos, filtrarlos o romper el contrato
+que consume el frontend? Si no, es MAYOR.
 
 ## Bloqueantes de backend
 

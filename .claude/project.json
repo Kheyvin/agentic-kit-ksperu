@@ -1,9 +1,11 @@
 {
-  "_comentario": "Configuración por proyecto. 'auto' detecta el layout leyendo el disco. Ajusta solo si tu estructura es inusual.",
-  "layout": "auto",
-  "backend_dir": "auto",
-  "frontend_dir": "auto",
-  "app_type": "system",
-  "ci": "ninguno",
-  "deploy": "sin_definir"
+  "_comentario": "Configuración por proyecto. 'auto' detecta las instancias leyendo el disco: cualquier carpeta de primer nivel con composer.json + src/ es un backend, y con package.json que dependa de vue es un frontend. Fija valores a mano solo si tu estructura es inusual.",
+  "instancias": {
+    "backends": "auto",
+    "frontends": "auto"
+  },
+  "_ejemplo_manual": {
+    "backends": ["ventas_backend", "admin_backend"],
+    "frontends": ["cliente_frontend", "admin_frontend"]
+  }
 }

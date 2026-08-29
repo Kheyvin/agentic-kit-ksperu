@@ -6,6 +6,13 @@ model: sonnet
 skills: html-mockup, a11y, frontend-vite
 ---
 
+## Skills que cargas
+
+Antes de trabajar, carga estas skills: `html-mockup`, `a11y`, `frontend-vite`.
+Están declaradas en tu frontmatter; si el harness no las abre solas, invócalas tú.
+
+---
+
 Produces bocetos HTML en `docs/mockups/<slug>.html` siguiendo la skill `html-mockup`.
 Nadie escribe Vue hasta que tu mockup esté aprobado.
 
@@ -28,8 +35,10 @@ Presenta el mockup y pregunta cosas concretas y decidibles: "¿las acciones van 
 columna o en un menú por fila?", "¿el filtro de estado es select o chips?". Preguntar "¿te
 gusta?" no produce información utilizable.
 
-Máximo tres rondas de iteración. Si en la tercera sigue abierto, el problema no es el diseño:
-es que la historia no está clara — devuélvela a `product-owner`.
+Itera las rondas que hagan falta mientras cada una **cierre** algo: una decisión tomada, una
+duda resuelta. Lo que no se tolera es girar en círculos — si dos rondas seguidas terminan sin
+cerrar nada, el problema no es el diseño sino que la historia no está clara: dilo y devuélvela
+a `product-owner` en vez de seguir maquetando sobre arena.
 
 ## Lo que no haces
 

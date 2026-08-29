@@ -25,20 +25,27 @@ Actúa como **Arquitecto Backend Senior (Symfony/PHP)**. Vas a construir una **A
 | `api-platform/symfony` + `api-platform/doctrine-orm` ^4.3 | Exposición de recursos REST |
 | `doctrine/orm` ^3.6 + `doctrine-bundle` ^3.2 + `migrations-bundle` ^4.0 | ORM y migraciones |
 | `lexik/jwt-authentication-bundle` ^3.2 | Autenticación JWT |
-| `gesdinet/jwt-refresh-token-bundle` | **Refresh tokens rotativos (instalar: decisión fijada)** |
 | `symfony/security-bundle` | Firewalls, roles, voters |
 | `nelmio/cors-bundle` ^2.6 | CORS para la SPA |
 | `symfony/serializer` + `validator` + `property-info` + `property-access` | Serialización y validación |
-| `symfony/messenger` + `doctrine-messenger` | Async — **opcional, ya en composer, sin routing por defecto** |
-| `symfony/mailer` | Correos — **opcional, NO está aún en composer** |
+| `symfony/messenger` + `doctrine-messenger` | Colas y trabajos en segundo plano — **opcional, se pregunta** |
+| `symfony/mailer` | Correos — **opcional, se pregunta** |
+| `mercure` | Empuje en tiempo real al navegador — **opcional, se pregunta** |
 | `doctrine/doctrine-fixtures-bundle` (dev) | Datos de prueba |
 | `symfony/maker-bundle` (dev) | Generación por comandos |
 
 ```bash
-# Solo si el cliente los requiere:
+# Solo si el usuario los pide, y explicándole antes qué hace cada uno:
 composer require symfony/mailer
-composer require gesdinet/jwt-refresh-token-bundle   # este SÍ se instala siempre que haya login
+composer require symfony/messenger
+composer require mercure
 ```
+
+**No hay refresh token en este kit.** El login devuelve un `token` y nada más.
+
+La base de datos de desarrollo es **SQLite**:
+`DATABASE_URL="sqlite:///%kernel.project_dir%/var/data.db"`. No hay producción: si el usuario
+quiere otro motor, hay que avisarle de que cambie `.env`.
 
 ---
 
@@ -68,7 +75,7 @@ src/
 │
 ├── Security/
 │   ├── Voter/               # Permisos object-level (OwnerVoter, <Entidad>Voter)
-│   └── ApiUserProvider…     # solo si el provider por email no basta
+│   └── ApiUserProvider…     # solo si el provider por username no basta
 │
 ├── EventListener/
 │   ├── ExceptionListener.php        # normaliza errores fuera de API Platform (§9)
@@ -82,7 +89,7 @@ src/
 └── Kernel.php
 
 config/
-├── packages/                # api_platform.yaml, security.yaml, lexik_jwt…, nelmio_cors…, gesdinet…
+├── packages/                # api_platform.yaml, security.yaml, lexik_jwt…, nelmio_cors…
 ├── jwt/                     # claves private.pem / public.pem — GITIGNORED
 └── routes/
 
@@ -107,7 +114,7 @@ DTO entra/sale por los bordes. Un Repository nunca llama a un Service. Una Entit
 > Esta sección existe **idéntica** en el prompt del frontend. Cualquier cambio se hace en ambos.
 
 ### 3.1 Generalidades
-- **Prefijo:** todo bajo `/api`. Documentación en `/api/docs` (pública en dev, decidir en prod).
+- **Prefijo:** todo bajo `/api`. Documentación en `/api/docs`.
 - **Formatos:** recursos API Platform en `application/ld+json` (JSON-LD). Escrituras aceptan `application/json`; PATCH usa `application/merge-patch+json`. Endpoints custom hablan `application/json` plano.
 - **Fechas:** siempre **ISO 8601 en UTC** (`2026-07-13T15:00:00+00:00`). Doctrine con `datetime_immutable`; el servidor y la BD operan en UTC. Nunca fechas locales.
 - **Nombres de campos:** `camelCase` (propiedades PHP tal cual, sin name converters).
@@ -151,13 +158,13 @@ API Platform los emite nativamente; el `ExceptionListener` garantiza el mismo sh
   ]
 }
 ```
-Mapeo obligatorio de status: `400` request malformado · `401` sin/mal token · `403` sin permiso (Voter) · `404` no existe · `409` conflicto de negocio (duplicado, estado inválido) · `422` violación de validación (SIEMPRE con `violations[]`) · `500` error interno **sin traza ni mensaje interno en prod**.
+Mapeo obligatorio de status: `400` request malformado · `401` sin/mal token · `403` sin permiso (Voter) · `404` no existe · `409` conflicto de negocio (duplicado, estado inválido) · `422` violación de validación (SIEMPRE con `violations[]`) · `500` error interno **sin traza ni mensaje interno filtrado al cliente**.
 
 ### 3.4 Autenticación
-- `POST /api/login_check` con `{ "email", "password" }` → `200 { "token", "refresh_token" }`. Inválido → `401 { "code": 401, "message": "Invalid credentials." }`.
-- `POST /api/token/refresh` con `{ "refresh_token" }` → nuevo par (rotación con invalidación del anterior — `single_use: true` en gesdinet). Inválido/expirado → `401`.
-- `GET /api/me` → `{ id, email, roles, fullName }` del usuario autenticado (via State Provider).
-- **TTL:** access `3600s` (config lexik `token_ttl`), refresh `2592000s` (30 días, gesdinet `ttl`), rotativo y revocable (persistido en BD → logout real posible).
+- El identificador de login es **`username`**, no `email` — es lo que genera `make:user` en el bootstrap.
+- `POST /api/login_check` con `{ "username", "password" }` → `200 { "token" }`. Inválido → `401 { "code": 401, "message": "Invalid credentials." }`.
+- `GET /api/me` → `{ id, username, roles }` del usuario autenticado (via State Provider).
+- **TTL:** access `3600s` (config lexik `token_ttl`). **No hay refresh token**: al caducar, el frontend limpia sesión y manda a `/login?redirect=<ruta>`.
 - **Roles:** `ROLE_USER`, `ROLE_ADMIN`, ... — strings idénticos a `constants/enums.js` del frontend.
 
 ---
@@ -173,14 +180,15 @@ php bin/console doctrine:database:drop --force            # destructivo, solo de
 php bin/console doctrine:query:sql "SELECT * FROM tabla"  # inspección puntual
 
 # Entidades
-php bin/console make:entity                 # asistente interactivo
-php bin/console make:entity NombreEntidad   # directo (también crea el Repository)
+# make:entity es INTERACTIVO: desde un agente hay que alimentarlo por stdin o se cuelga.
+printf 'Product\nname\nstring\n255\nno\n\n' | php bin/console make:entity
+php bin/console make:entity NombreEntidad   # también crea el Repository
 
 # Migraciones — workflow correcto
 php bin/console make:migration              # diff entidades ↔ BD
-php bin/console doctrine:migrations:migrate # aplica pendientes
+php bin/console doctrine:migrations:migrate --no-interaction  # aplica pendientes
 php bin/console doctrine:schema:validate    # mapeo OK — correr antes de cada commit
-php bin/console doctrine:schema:update --force   # SOLO desarrollo rápido; PROHIBIDO en prod
+# El update directo del esquema está BLOQUEADO por hook. No hay atajo: make:migration.
 
 # Caché — tras modificar atributos de entidades
 php bin/console cache:clear
@@ -261,14 +269,14 @@ final class SalesReportController extends AbstractController
 
 ---
 
-## 8. Autenticación JWT (lexik + gesdinet)
+## 8. Autenticación JWT (lexik)
 
 ### 8.1 Setup
 ```bash
+composer require symfony/security-bundle
+printf 'User\nyes\nusername\nyes\n' | php bin/console make:user
 composer require lexik/jwt-authentication-bundle
-composer require gesdinet/jwt-refresh-token-bundle
-php bin/console lexik:jwt:generate-keypair      # claves en config/jwt (gitignored)
-php bin/console make:entity RefreshToken --no-interaction  # o la entidad que provee gesdinet
+php bin/console lexik:jwt:generate-keypair      # las claves quedan fuera de git
 ```
 
 ### 8.2 `security.yaml` (esqueleto de referencia)
@@ -278,38 +286,37 @@ security:
         App\Entity\User: 'auto'
     providers:
         app_user_provider:
-            entity: { class: App\Entity\User, property: email }
+            entity: { class: App\Entity\User, property: username }
     firewalls:
         login:
             pattern: ^/api/login
             stateless: true
             json_login:
                 check_path: /api/login_check
-                username_path: email
+                username_path: username
                 success_handler: lexik_jwt_authentication.handler.authentication_success
                 failure_handler: lexik_jwt_authentication.handler.authentication_failure
-        refresh:
-            pattern: ^/api/token/refresh
-            stateless: true
-            refresh_jwt: { check_path: /api/token/refresh }
         api:
             pattern: ^/api
             stateless: true
             jwt: ~
     access_control:
         - { path: ^/api/login,          roles: PUBLIC_ACCESS }
-        - { path: ^/api/token/refresh,  roles: PUBLIC_ACCESS }
-        - { path: ^/api/docs,           roles: PUBLIC_ACCESS }   # revisar en prod
+        - { path: ^/api/docs,           roles: PUBLIC_ACCESS }
         - { path: ^/api,                roles: IS_AUTHENTICATED_FULLY }
 ```
 `User` implementa `UserInterface` + `PasswordAuthenticatedPasswordInterface`; `plainPassword` es propiedad NO mapeada, hasheada en `UserPasswordHashProcessor`.
 
-### 8.3 Refresh (gesdinet)
-- `single_use: true` (rotación: cada refresh invalida el anterior), `ttl: 2592000`, persistido en BD.
-- **Logout real:** endpoint que revoca el refresh token del usuario; el access expira solo (TTL 1h).
+### 8.3 Integración con API Platform
+`config/packages/lexik_jwt_authentication.yaml` declara `api_platform.check_path: /api/login_check`,
+`username_path: username` y `password_path: password`. Sin ese bloque, la documentación de
+API Platform no sabe autenticar.
+
+**Logout** es del lado del cliente: se descarta el token. Sin refresh token no hay nada que
+revocar en servidor, y el access caduca solo a la hora.
 
 ### 8.4 Payload y permisos
-- `JwtCreatedListener` (evento `lexik_jwt_authentication.on_jwt_created`): añade `id`, `roles`, `fullName` al payload — el frontend los lee sin llamada extra, pero `GET /api/me` sigue siendo la fuente autoritativa.
+- `JwtCreatedListener` (evento `lexik_jwt_authentication.on_jwt_created`): añade `id` y `roles` al payload — el frontend los lee sin llamada extra, pero `GET /api/me` sigue siendo la fuente autoritativa.
 - **Voters** para todo permiso object-level (`is_granted('EDIT', object)`): un Voter por entidad con reglas (`VIEW`, `EDIT`, `DELETE`). La regla "solo el dueño edita su recurso" SIEMPRE es un Voter, nunca un `if ($user !== $object->getOwner())` en un service.
 
 ### 8.5 CORS (`nelmio_cors.yaml`)
@@ -323,7 +330,8 @@ nelmio_cors:
         max_age: 3600
     paths: { '^/api': ~ }
 ```
-`CORS_ALLOW_ORIGIN` en `.env` apunta al origen exacto de la SPA (no `*` en producción).
+`CORS_ALLOW_ORIGIN` en `.env` apunta al origen exacto de la SPA. Con varios frontends, cada
+puerto de Vite es un origen distinto: hay que listarlos todos, no poner `*`.
 
 ---
 
@@ -363,7 +371,7 @@ framework:
         routing:
             App\Message\SendWelcomeEmail: async
 ```
-- Worker: `php bin/console messenger:consume async` (supervisord/systemd en prod). Revisar fallidos: `messenger:failed:show / :retry`.
+- Worker: `php bin/console messenger:consume async` en una terminal aparte. Revisar fallidos: `messenger:failed:show / :retry`.
 - Casos: emails, reportes pesados, webhooks, integraciones externas. Los handlers delegan en Services (misma regla de capas).
 
 ---
@@ -393,14 +401,14 @@ php bin/console doctrine:fixtures:load
 
 ## 14. Casuísticas a cubrir siempre
 
-- **Auth completo:** login, refresh rotativo, revocación (logout real), expiración, roles, Voters object-level, payload enriquecido, CORS correcto.
+- **Auth completo:** login por `username`, expiración del token, roles, Voters object-level, payload enriquecido, CORS correcto.
 - **Validación total:** ninguna escritura sin constraints; `422` con `violations` siempre; unicidad con `UniqueEntity` + constraint de BD.
 - **Colecciones:** paginación (mismo `itemsPerPage` que el frontend), filtros declarados por recurso, orden, colecciones sin N+1.
 - **Serialización:** grupos en todo campo; cero fugas (`password`, tokens, internos).
-- **Errores:** RFC 7807 unificado incluso fuera de API Platform; `409` para conflictos de negocio; `500` opaco en prod.
-- **Migraciones** versionadas y revisadas; `schema:validate` en verde antes de cada commit; `schema:update` jamás en prod.
+- **Errores:** RFC 7807 unificado incluso fuera de API Platform; `409` para conflictos de negocio; `500` sin filtrar detalle interno.
+- **Migraciones** versionadas y revisadas; `schema:validate` en verde antes de cada commit; el update directo del esquema está bloqueado por hook, sin excepción.
 - **Timestamps** en toda entidad; UTC en todo el sistema.
-- **Concurrencia/idempotencia** donde duela: lock optimista (`#[ORM\Version]`) en entidades editadas concurrentemente.
+- **Concurrencia/idempotencia** donde duela: lock optimista (`#[ORM\Version]`) en entidades editadas concurrentemente. Recuerda que SQLite admite un solo escritor a la vez.
 - Mailer/Messenger **solo si se solicitan**; si Mailer + Messenger conviven, emails async.
 
 ---
@@ -413,7 +421,7 @@ php bin/console doctrine:fixtures:load
 - [ ] Recursos API Platform con operaciones explícitas, grupos completos y filtros declarados.
 - [ ] `hydra_prefix: false` + `itemsPerPage` alineado con el frontend (§3.2 cumplido byte a byte).
 - [ ] Errores RFC 7807 en TODA la API, incluidas rutas custom; `violations` en cada 422.
-- [ ] JWT: login + refresh rotativo + revocación + `GET /api/me` + TTLs de §3.4.
+- [ ] JWT: login por `username` + `GET /api/me` + TTL de §3.4; el `curl` de verificación devuelve `token`.
 - [ ] CORS restringido al origen de la SPA con header `Authorization` permitido.
 - [ ] Fixtures con credenciales conocidas para el smoke del frontend.
-- [ ] Mailer/Messenger presentes SOLO si el cliente los pidió; secretos fuera de git.
+- [ ] Mailer/Messenger/Mercure presentes SOLO si el usuario los pidió; secretos fuera de git.

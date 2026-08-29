@@ -2,19 +2,34 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
+      "Bash(bash .claude/scripts/*)",
       "Bash(php bin/console *)",
-      "Bash(composer *)",
-      "Bash(symfony *)",
+      "Bash(php -l *)",
+      "Bash(composer require *)",
+      "Bash(composer install *)",
+      "Bash(composer dump-autoload*)",
+      "Bash(symfony new *)",
+      "Bash(symfony server:*)",
+      "Bash(symfony check:*)",
+      "Bash(npm create vite*)",
+      "Bash(npm install *)",
       "Bash(npm run *)",
       "Bash(npx playwright *)",
+      "Bash(node --check *)",
+      "Bash(curl *)",
       "Bash(git status)",
       "Bash(git diff *)",
       "Bash(git log *)",
-      "Bash(.claude/scripts/*)"
+      "Bash(git add *)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__plugin_playwright_playwright__browser_evaluate",
+      "mcp__plugin_playwright_playwright__browser_console_messages",
+      "mcp__plugin_playwright_playwright__browser_resize"
     ],
     "deny": [
-      "Read(./.env.local)",
-      "Read(./config/jwt/**)",
+      "Read(./**/.env.local)",
+      "Read(./**/config/jwt/**)",
       "Bash(php bin/console doctrine:schema:update *)",
       "Bash(php bin/console doctrine:database:drop *)",
       "Bash(git push --force*)",
@@ -36,7 +51,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Bash|Write|Edit",
         "hooks": [
           {
             "type": "command",

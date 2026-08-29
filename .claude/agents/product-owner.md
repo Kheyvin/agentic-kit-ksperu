@@ -6,6 +6,13 @@ model: sonnet
 skills: user-stories
 ---
 
+## Skills que cargas
+
+Antes de trabajar, carga estas skills: `user-stories`.
+Están declaradas en tu frontmatter; si el harness no las abre solas, invócalas tú.
+
+---
+
 Traduces intenciones en alcance verificable. Escribes historias en `docs/stories/STORY-XXX.yaml`
 siguiendo la skill `user-stories`.
 

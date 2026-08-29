@@ -1,24 +1,27 @@
 # Estado del proyecto — ÚNICA fuente de verdad.
 # Ningún agente responde "cómo vamos" de memoria: lo lee de aquí.
+#
+# Todo lo que describe este archivo es entorno de DESARROLLO. No hay CI, no hay
+# despliegue y no hay release: de subir el proyecto se encarga el usuario.
 
 proyecto:
   nombre:
-  fase: discovery          # discovery | plan | build | audit | qa | release
-  layout: auto             # monorepo | plano | solo-backend | solo-frontend | repos-separados
-  app_type: system         # system | landing  (decide si GSAP existe)
+  fase: discovery          # discovery | plan | build | audit | qa
+  tipo:                    # SPA | ERP | CRM | panel | landing | API pública | ...
+                           # Lo cierra el arquitecto en el discovery, en palabras del dominio.
   actualizado:
 
-infra:
-  ci: ninguno              # ninguno | github-actions | gitlab-ci
-  deploy: sin_definir      # sin_definir | vps-docker | paas | hosting-compartido
-  # Mientras 'ci' sea 'ninguno', los gates corren por hook en local: hay red, no CI.
-  # Mientras 'deploy' sea 'sin_definir', el agente devops NO propone infraestructura.
-
-contrato:
-  version: 1
-  archivo: docs/CONTRACT.md
-  lock: docs/.contract.lock   # si hay repos separados, debe coincidir en ambos
-  ultimo_cambio:
+# Instancias del repositorio. paths.sh las detecta solas leyendo el disco;
+# esto es el registro legible de qué es cada una y quién habla con quién.
+instancias:
+  backends: []
+  # - nombre: ventas_backend
+  #   contrato: docs/contracts/ventas_backend.md
+  #   consumido_por: [cliente_frontend]
+  frontends: []
+  # - nombre: cliente_frontend
+  #   consume: [ventas_backend]
+  #   puerto_dev: 5173
 
 historias: []
 # - id: STORY-001
@@ -29,6 +32,7 @@ historias: []
 tareas: []
 # - id: TASK-014
 #   titulo: Endpoint GET /api/products con filtros
+#   instancia: ventas_backend
 #   agente: backend-developer
 #   estado: en_curso        # pendiente | en_curso | en_auditoria | bloqueada | hecha
 #   depende_de: [TASK-012]
@@ -45,10 +49,7 @@ deuda: []
 #   origen: TASK-014
 #   prioridad: media
 
-decisiones_pendientes:
-  - pregunta: "¿Qué CI se usará para ejecutar los gates?"
-    bloquea: []
-    nota: "No urgente. Los hooks ya corren los gates en local. Plantillas listas en .claude/templates/ci/."
-  - pregunta: "¿Dónde se despliega este proyecto?"
-    bloquea: []
-    nota: "Hasta decidirlo, devops no propone infraestructura. Condiciona Docker, variables y runbook."
+decisiones_pendientes: []
+# - pregunta: "¿El borrado de un pedido es lógico o físico?"
+#   bloquea: [TASK-018]
+#   nota: "Afecta al modelo de datos; decidir antes de la migración."

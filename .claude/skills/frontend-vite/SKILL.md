@@ -8,6 +8,9 @@ description: Estándar de SPA headless Vue 3 + Vite + Pinia + Axios + Tailwind �
 El estándar completo está en `reference/frontend-standard.md`. **Léelo entero antes de la
 primera tarea de frontend de una sesión.** Esto es el resumen operativo.
 
+El login usa **`username`**, no `email`, y **no hay refresh token**: un `401` cierra sesión y
+manda a `/login?redirect=<ruta>`.
+
 ## Reglas de oro
 
 1. Composition API + `<script setup>` siempre. Nunca Options API. Nunca TypeScript: JS + JSDoc.
@@ -17,7 +20,11 @@ primera tarea de frontend de una sesión.** Esto es el resumen operativo.
    Reutilización visual vía **atoms**, no vía `@apply` ni cadenas de clases copiadas.
 5. Todo import de vista es lazy: `() => import(...)`.
 6. Endpoints, claves de storage y enums → `constants/`. Cero valores mágicos.
-7. GSAP **solo en landings**. Si `APP_TYPE === 'system'`, ni se instala.
+   Con varios backends, un archivo de rutas por backend: `api.ventas.routes.js`,
+   `api.admin.routes.js`. Mezclarlos hace imposible saber qué contrato rompiste.
+7. Ninguna librería de animación se instala salvo que el usuario la pida. Transiciones de
+   Tailwind y `<Transition>` de Vue cubren lo normal; `prefers-reduced-motion` siempre
+   respetado. Si entra GSAP, manda la skill `gsap-vue` y hace falta un ADR.
 8. El frontend nunca adivina el formato del backend: normaliza en `services/http/normalizers.js`.
 
 ## Dependencias (dirección única)
@@ -52,5 +59,5 @@ filtro". Esto no es opcional ni se deja "para después".
 bash .claude/scripts/gate-frontend.sh
 ```
 
-Además, a mano: refresh de token con cola anti-bucle intacto, guards de auth y rol, `?redirect=`
-honrado, y componentes por debajo de 200 líneas.
+Además, a mano: el `401` cierra sesión y redirige con `?redirect=` (no hay refresh token que
+reintentar), guards de auth y rol, y componentes por debajo de 200 líneas.

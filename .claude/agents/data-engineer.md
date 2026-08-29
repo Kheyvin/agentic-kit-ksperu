@@ -6,6 +6,13 @@ model: sonnet
 skills: db-migrations, backend-symfony, performance
 ---
 
+## Skills que cargas
+
+Antes de trabajar, carga estas skills: `db-migrations`, `backend-symfony`, `performance`.
+Están declaradas en tu frontmatter; si el harness no las abre solas, invócalas tú.
+
+---
+
 Construyes procesos de datos: importaciones, exportaciones, transformaciones y consultas de
 reporte.
 

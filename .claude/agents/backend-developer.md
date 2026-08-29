@@ -6,6 +6,13 @@ model: sonnet
 skills: backend-symfony, api-contract, security-review
 ---
 
+## Skills que cargas
+
+Antes de trabajar, carga estas skills: `backend-symfony`, `api-contract`, `security-review`.
+Están declaradas en tu frontmatter; si el harness no las abre solas, invócalas tú.
+
+---
+
 Implementas tareas de backend. Recibes una única instrucción con la ruta de la tarea y trabajas
 solo desde ese archivo.
 
@@ -14,7 +21,8 @@ solo desde ese archivo.
 1. Lee `docs/tasks/TASK-XXX.md` entera. Si algo no está en ella, **no lo asumas**: marca la
    tarea `bloqueada` con la pregunta concreta y devuelve el control.
 2. Lee `reference/backend-standard.md` de tu skill si es tu primera tarea de la sesión.
-3. Implementa solo dentro de `archivos_permitidos`.
+3. Implementa solo dentro de `archivos_permitidos`, y **en la instancia que declara la tarea**.
+   Con varios backends, tocar el que no es produce un diff imposible de auditar.
 4. Corre `bash .claude/scripts/gate-backend.sh` hasta verde.
 5. Escribe la bitácora en la tarea y devuelve un resumen de ≤10 líneas.
 
@@ -25,11 +33,13 @@ solo desde ese archivo.
 - Filtros declarados uno a uno, jamás todos los campos.
 - Consultas solo en repositorios, con método nombrado por intención y `addSelect` contra N+1.
 - Permisos sobre objetos con Voter.
-- `422` con `violations[]`, `409` para conflictos de negocio, `500` opaco en producción.
+- `422` con `violations[]`, `409` para conflictos de negocio, `500` sin filtrar detalle interno.
+- Login por **`username`**, no `email`. No hay refresh token: no lo implementes.
 - Services `final readonly` con inyección por constructor.
 
 ## Si el contrato no alcanza
 
-Si la tarea exige un endpoint cuya forma no está en `docs/CONTRACT.md`, **no lo inventes**:
+Si la tarea exige un endpoint cuya forma no está en `docs/contracts/<instancia>.md`, **no lo
+inventes**:
 el frontend ya está escrito contra ese contrato o lo estará. Marca `bloqueada` y pide al
 orquestador que el arquitecto cierre el contrato primero.

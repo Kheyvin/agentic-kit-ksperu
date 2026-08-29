@@ -10,7 +10,7 @@ Actúa como **Arquitecto Frontend Senior**. Vas a construir una **SPA headless**
 3. **Tailwind CSS es el único sistema de estilos.** Prohibido crear frameworks CSS propios, archivos de utilidades manuales o CSS por componente salvo excepciones documentadas (ver §10).
 4. **Ningún componente llama a `axios` directamente.** Toda red pasa por `services/`.
 5. **La lógica de negocio vive en `stores/` (Pinia) y `composables/`, nunca en componentes de presentación.**
-6. **GSAP SOLO en landing pages / marketing.** En sistemas (ERP, CRM, dashboards, paneles) **está prohibido**: sobrecarga la navegación y degrada UX (§9).
+6. **Animaciones sobrias y con `prefers-reduced-motion` respetado.** Micro-transiciones con Tailwind (`transition`, `duration-*`) y `<Transition>` de Vue; ninguna librería de animación entra sin que el usuario la pida (§9).
 7. **Todo import de vista/ruta es lazy** (`() => import(...)`).
 8. **Nada de valores mágicos:** endpoints, claves de storage, enums → `constants/`; tokens visuales → `@theme` de Tailwind.
 9. **El frontend nunca "adivina" el formato del backend:** consume exactamente el contrato de §3 y lo normaliza en un solo lugar (`services/http/normalizers.js`).
@@ -28,8 +28,7 @@ Actúa como **Arquitecto Frontend Senior**. Vas a construir una **SPA headless**
 | Axios               | ^1.17   | Cliente HTTP |
 | **Tailwind CSS**    | ^4.x    | **Framework CSS (utility-first)** |
 | **@tailwindcss/vite** | ^4.x  | Plugin oficial de integración con Vite |
-| GSAP                | ^3.15   | Animaciones — **solo landings** |
-| playwright-core     | ^1.60   | Smoke tests (`npm run smoke`) |
+| @playwright/test    | ^1.60   | Tests end-to-end |
 
 **Instalación de Tailwind (v4, sin `tailwind.config.js` salvo necesidad):**
 ```bash
@@ -76,7 +75,7 @@ src/
 ├── services/                # CAPA DE RED — única que conoce axios y el formato API Platform
 │   ├── http/
 │   │   ├── client.js        # Instancia axios: baseURL, timeout, headers Accept
-│   │   ├── interceptors.js  # Request (Bearer) + Response (refresh con cola, errores)
+│   │   ├── interceptors.js  # Request (Bearer) + Response (401 → logout, errores)
 │   │   ├── errorHandler.js  # RFC 7807 → AppError normalizado (§3.3)
 │   │   └── normalizers.js   # Colecciones API Platform → { items, total } (§3.2)
 │   └── modules/             # Un archivo por dominio, funciones puras de red
@@ -92,8 +91,7 @@ src/
 │   ├── useAsyncState.js     # { data, loading, error, execute } + AbortController
 │   ├── useCollection.js     # Listados: paginación + filtros + orden + sync con URL
 │   ├── useForm.js           # Valores, validación cliente, mapeo de violations 422
-│   ├── useNotify.js         # Toasts (success/error/info)
-│   └── useGsap.js           # SOLO landings, import dinámico de gsap
+│   └── useNotify.js         # Toasts (success/error/info)
 │
 ├── components/              # ATOMIC DESIGN (solo presentación, estilado con Tailwind)
 │   ├── atoms/               # BaseButton, BaseInput, BaseBadge, BaseSpinner, BaseIcon...
@@ -189,10 +187,10 @@ Todo error del backend llega con este shape (API Platform lo emite nativamente):
 Mapeo obligatorio: `400→VALIDATION`, `401→UNAUTHORIZED`, `403→FORBIDDEN`, `404→NOT_FOUND`, `409→CONFLICT`, `422→VALIDATION` (con `fields`), `5xx→SERVER`, sin respuesta→`NETWORK`.
 
 ### 3.4 Autenticación
-- `POST /api/login_check` con `{ "email": "...", "password": "..." }` → `200 { "token": "...", "refresh_token": "..." }`. Credenciales inválidas → `401 { "code": 401, "message": "Invalid credentials." }`.
-- `POST /api/token/refresh` con `{ "refresh_token": "..." }` → nuevo par `{ token, refresh_token }` (rotación). Refresh inválido/expirado → `401`.
-- `GET /api/me` → perfil del usuario autenticado (id, email, roles, nombre).
-- Access token: **TTL corto (~1h)**. Refresh: **TTL largo (~30 días), rotativo, revocable**.
+- El identificador de login es **`username`**, no `email`.
+- `POST /api/login_check` con `{ "username": "...", "password": "..." }` → `200 { "token": "..." }`. Credenciales inválidas → `401 { "code": 401, "message": "Invalid credentials." }`.
+- `GET /api/me` → perfil del usuario autenticado (`{ id, username, roles }`).
+- Access token: **TTL ~1h**. **No hay refresh token**: al caducar, la siguiente petición devuelve `401`, se limpia la sesión y se va a `/login?redirect=<ruta actual>`.
 - Toda ruta protegida exige `Authorization: Bearer <token>`.
 - **Roles:** strings `ROLE_USER`, `ROLE_ADMIN`, ... idénticos en `constants/enums.js` y en el backend.
 
@@ -227,22 +225,22 @@ export const httpClient = axios.create({
 ### 5.2 `interceptors.js` — comportamiento exacto
 - **Request:** si `useAuthStore().accessToken` existe → inyectar `Authorization: Bearer`.
 - **Response OK:** retornar `response.data` (convenio único del proyecto: los services reciben data, no response).
-- **401 con sesión activa:** ejecutar refresh **una sola vez** con **cola de espera**:
+- **401 con sesión activa:** el token caducó o es inválido. No hay refresh que intentar,
+  así que se cierra sesión y se manda al login conservando el destino:
 ```js
-let refreshing = null // promesa compartida: evita N refresh simultáneos
-
-async function onUnauthorized(originalRequest) {
-  if (originalRequest._retry) return logoutAndReject()   // anti-bucle
-  originalRequest._retry = true
-  refreshing ??= authStore.refresh().finally(() => (refreshing = null))
-  await refreshing                                        // todas las requests esperan aquí
-  return httpClient(originalRequest)                      // reintento con token nuevo
+async function onUnauthorized() {
+  authStore.logout()                       // limpia token y usuario de memoria
+  const destino = router.currentRoute.value.fullPath
+  router.push(`/login?redirect=${encodeURIComponent(destino)}`)
+  return Promise.reject(toAppError(401))   // el caller recibe AppError, no el error de axios
 }
 ```
-  Si el refresh falla → `logout()` + redirect a `/login?redirect=<ruta actual>`.
+  No implementes colas, reintentos ni `_retry`: sin refresh token no hay nada que reintentar,
+  y un reintento a ciegas con el mismo token caducado produce un bucle.
 - **403:** notificar "sin permisos" vía `useNotify` (no logout).
 - **422/400/404/409/5xx/network:** delegar a `errorHandler.js` y **rechazar con `AppError`** — los stores y composables solo conocen `AppError`, nunca el error crudo de axios.
-- El endpoint de refresh y el de login están **excluidos** del interceptor de 401.
+- El endpoint de login está **excluido** del interceptor de 401: un login con credenciales
+  malas devuelve `401` legítimamente y debe pintarse en el formulario, no cerrar sesión.
 
 ### 5.3 `modules/*.service.js`
 - Una función por endpoint. Reciben parámetros primitivos/DTOs, retornan data normalizada. **Sin estado, sin loading, sin toasts** (eso es de stores/composables).
@@ -266,8 +264,8 @@ export const productService = {
 - **Un store por dominio**, sintaxis *setup store*. Orden interno: refs (state) → computed (getters) → funciones async (actions) → `return` explícito.
 - Actions llaman a services, gestionan `loading/error` (tipo `AppError|null`), mutan estado. Sin axios directo.
 - **Qué va a store vs composable:** store = estado **compartido entre vistas** (sesión, catálogos, carrito). Composable = estado **local de una vista** (un listado, un formulario). No inflar stores con estado efímero.
-- **Persistencia explícita y mínima:** solo `refreshToken` y preferencias de UI, con claves de `storage.keys.js`. `accessToken` y `user` viven **en memoria**; al recargar la página, `App.vue` intenta `refresh()` con el refresh token persistido para restaurar sesión.
-> *Nota de seguridad:* el patrón por defecto es access en memoria + refresh en `localStorage`. Si el proyecto exige más seguridad, migrar a cookie `httpOnly` emitida por el backend y borrar todo storage de tokens; el resto de la arquitectura no cambia.
+- **Persistencia explícita y mínima:** el `token` y las preferencias de UI, con claves de `storage.keys.js`. `user` vive **en memoria**; al recargar la página, `App.vue` llama a `fetchProfile()` con el token persistido para restaurar la sesión — si devuelve `401`, el token había caducado y se va al login.
+> *Nota de seguridad:* sin refresh token, el access vive en `localStorage` para sobrevivir a un recargado. Es un compromiso conocido: lo mitiga el TTL de una hora. Si el proyecto exige más, se migra a cookie `httpOnly` emitida por el backend con un ADR que lo justifique.
 
 ```js
 export const useAuthStore = defineStore('auth', () => {
@@ -280,12 +278,11 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!accessToken.value)
   const hasRole = (role) => user.value?.roles?.includes(role) ?? false
 
-  async function login(credentials) { /* authService.login → set tokens → fetchProfile */ }
-  async function refresh() { /* usa refreshToken persistido, rota tokens */ }
+  async function login(credentials) { /* authService.login({username, password}) → set token → fetchProfile */ }
   async function fetchProfile() { /* GET /api/me */ }
   function logout() { /* limpia memoria + storage + redirect lo hace el guard */ }
 
-  return { accessToken, user, loading, error, isAuthenticated, hasRole, login, refresh, fetchProfile, logout }
+  return { accessToken, user, loading, error, isAuthenticated, hasRole, login, fetchProfile, logout }
 })
 ```
 
@@ -296,7 +293,7 @@ export const useAuthStore = defineStore('auth', () => {
 - Rutas lazy siempre. `meta: { requiresAuth: boolean, roles?: string[], layout: string, title: string }`.
 - Layout resuelto por meta en `App.vue` (componente dinámico) o por rutas anidadas — elegir UNO y documentarlo.
 - **`guards.js` (beforeEach), en este orden:**
-  1. Si `requiresAuth` y no autenticado → intentar restaurar sesión (refresh); si falla → `/login?redirect=to.fullPath`.
+  1. Si `requiresAuth` y no autenticado → intentar restaurar sesión con el token persistido (`fetchProfile`); si falla → `/login?redirect=to.fullPath`.
   2. Si autenticado y va a `/login` → redirect a home.
   3. Si `roles` definidos y `!roles.some(hasRole)` → `/403`.
   4. `document.title = to.meta.title + ' · ' + APP_NAME`.
@@ -315,13 +312,12 @@ export const useAuthStore = defineStore('auth', () => {
 
 ---
 
-## 9. GSAP — política estricta
+## 9. Animación — política
 
-- **Permitido:** solo `views/landing/**` o proyectos tipo landing/marketing/portfolio.
-- **Prohibido** en ERP, CRM, dashboards o cualquier sistema de gestión: sobrecarga la navegación, penaliza rendimiento y rompe la previsibilidad UX.
-- Al iniciar el proyecto se fija `APP_TYPE = 'landing' | 'system'` en `app.config.js`. Si es `system`: **gsap no se instala ni se importa** (retirarlo de dependencies).
-- Cuando aplique: import **dinámico** dentro de `useGsap.js` (nunca en `main.js`), respetar `prefers-reduced-motion` (si está activo → sin animaciones), y `kill()` de timelines/ScrollTriggers en `onUnmounted`.
-- Micro-transiciones de UI en sistemas (hover, apertura de modales) se resuelven con **transiciones de Tailwind** (`transition`, `duration-*`) y `<Transition>` de Vue — nunca con GSAP.
+- **Por defecto no se instala ninguna librería de animación.** Las transiciones de Tailwind (`transition`, `duration-*`) y `<Transition>` de Vue cubren hover, apertura de modales, entradas de lista y cambios de estado.
+- Una librería (GSAP, Motion...) entra solo si **el usuario la pide** y el tipo de proyecto lo justifica — una landing o un portfolio, no un ERP ni un panel de gestión, donde la animación de más ralentiza la navegación diaria.
+- Cuando entre: import **dinámico** en un composable dedicado (nunca en `main.js`), respetar `prefers-reduced-motion` (activo → sin animaciones), y limpiar timelines en `onUnmounted`.
+- **Si la librería es GSAP, el estándar aplicable es la skill `gsap-vue`** (`reference/gsap-standard.md`): composable con carga perezosa, `gsap.context(fn, scope)` y `ctx.revert()` en `onUnmounted`, timelines en vez de `delay` encadenado, ScrollTrigger solo en el nivel superior, y `gsap.matchMedia()` para reduced-motion. El gate de frontend comprueba que nadie importe `gsap` fuera de `composables/` y que no queden `markers: true`.
 
 ---
 
@@ -397,7 +393,7 @@ const SIZES = { sm: 'px-3 py-1.5 text-sm', md: 'px-4 py-2 text-sm', lg: 'px-5 py
 ## 12. Casuísticas a cubrir siempre
 
 - **Estados de UI:** toda vista con datos implementa `loading` (skeleton/spinner), `empty` (mensaje + CTA), `error` (mensaje + retry) y `success`.
-- **Auth:** login, logout, refresh con cola, restauración de sesión al recargar, expiración, `?redirect=`, protección por rol, `/403`.
+- **Auth:** login por `username`, logout, restauración de sesión al recargar, caducidad del token → `/login?redirect=`, protección por rol, `/403`.
 - **Formularios:** validación cliente (`rules`) + servidor (`violations` 422 mapeadas por campo), disabled/submitting, prevención de doble submit, `reset`, dirty-check antes de abandonar (guard `beforeRouteLeave` en formularios largos).
 - **Listados:** paginación, búsqueda con debounce (300ms), filtros, orden, sincronización con URL, estado vacío diferenciado ("sin datos" vs "sin resultados para el filtro").
 - **Concurrencia:** cancelación de requests obsoletos (AbortController), última respuesta gana.
@@ -407,9 +403,9 @@ const SIZES = { sm: 'px-3 py-1.5 text-sm', md: 'px-4 py-2 text-sm', lg: 'px-5 py
 
 ---
 
-## 13. Testing (smoke)
+## 13. Testing (E2E)
 
-`npm run smoke` (`scripts/smoke.mjs` con playwright-core) cubre como mínimo: la app levanta sin errores de consola, login con credenciales de fixtures funciona, ruta protegida sin sesión redirige a login, y el listado principal renderiza filas.
+`npx playwright test` cubre como mínimo: la app levanta sin errores de consola, login con las credenciales de las fixtures (`admin` / `pass_1234`) funciona, una ruta protegida sin sesión redirige a login, y el listado principal renderiza filas. El detalle está en la skill `qa-playwright`, que además verifica en vivo con el MCP del navegador antes de codificar el spec.
 
 ---
 
@@ -419,9 +415,9 @@ const SIZES = { sm: 'px-3 py-1.5 text-sm', md: 'px-4 py-2 text-sm', lg: 'px-5 py
 - [ ] Tailwind es el único sistema de estilos; tokens solo en `@theme`; cero CSS por componente sin justificación.
 - [ ] Reutilización visual vía atoms, no `@apply` ni cadenas de clases duplicadas.
 - [ ] Toda ruta es lazy con `meta` completo; guards de auth y rol funcionando; `?redirect=` honrado.
-- [ ] Refresh de token con cola anti-bucle; sesión se restaura al recargar.
+- [ ] `401` cierra sesión y redirige con `?redirect=`; la sesión se restaura al recargar con el token persistido.
 - [ ] `useForm` mapea `violations` del backend campo a campo.
 - [ ] Listados sincronizados con la URL y con los 4 estados de UI.
-- [ ] GSAP ausente si `APP_TYPE === 'system'`; si es landing, lazy + reduced-motion + cleanup.
+- [ ] Sin librerías de animación salvo petición explícita; `prefers-reduced-motion` respetado.
 - [ ] Enums/roles idénticos a los del backend.
-- [ ] Smoke test en verde.
+- [ ] Suite E2E en verde.

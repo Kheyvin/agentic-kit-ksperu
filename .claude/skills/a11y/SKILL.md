@@ -39,7 +39,9 @@ estático cuesta un ajuste de markup; detectado en producción cuesta rediseñar
 **Dinámica**
 - [ ] Estados de carga anunciados (`aria-busy` o `role="status"`).
 - [ ] Toasts en `aria-live="polite"`; errores críticos en `assertive`.
-- [ ] `prefers-reduced-motion` respetado (obligatorio si hay GSAP en una landing).
+- [ ] `prefers-reduced-motion` respetado en cualquier animación o transición. Con GSAP se
+      resuelve con `gsap.matchMedia()` — ver la skill `gsap-vue`. Pruébalo con la preferencia
+      activa en el sistema, no solo leyendo el código.
 - [ ] Imágenes con `alt` descriptivo; las decorativas con `alt=""`.
 
 **Táctil**

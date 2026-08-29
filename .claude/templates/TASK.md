@@ -2,7 +2,8 @@
 id: TASK-XXX
 titulo:
 historia: STORY-XXX
-capa: backend            # backend | frontend | fullstack | infra | docs | qa
+capa: backend            # backend | frontend | fullstack | docs | qa
+instancia: backend       # a qué backend o frontend concreto aplica
 agente: backend-developer
 skills: [backend-symfony, api-contract]
 estado: pendiente        # pendiente | en_curso | en_auditoria | bloqueada | hecha
@@ -30,7 +31,7 @@ historial de conversación ni conoce el proyecto.
 
 ## Fragmento del contrato API
 
-Copia aquí, literal, la parte de `docs/CONTRACT.md` que aplica. La redundancia es deliberada:
+Copia aquí, literal, la parte de `docs/contracts/<instancia>.md` que aplica. La redundancia es deliberada:
 elimina la dependencia de que el agente encuentre el archivo correcto.
 
 ```

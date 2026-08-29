@@ -15,6 +15,7 @@ Antes de guardar una tarea, verifica que responde por sí sola:
 
 - [ ] ¿Qué se construye y por qué (historia de origen)?
 - [ ] ¿Qué archivos exactos se pueden tocar, y cuáles están prohibidos?
+- [ ] ¿Sobre qué **instancia** se trabaja, cuando hay más de un backend o frontend?
 - [ ] ¿Cuál es el fragmento de contrato API relevante, **copiado dentro de la tarea**?
 - [ ] ¿Cuáles son los criterios de aceptación verificables?
 - [ ] ¿Qué comando prueba que funciona?
@@ -32,7 +33,8 @@ Usa `.claude/templates/TASK.md` sin modificar la estructura. Campos del frontmat
 id: TASK-014
 titulo: Endpoint GET /api/products con filtros
 historia: STORY-003
-capa: backend            # backend | frontend | fullstack | infra | docs
+capa: backend            # backend | frontend | fullstack | docs | qa
+instancia: ventas_backend  # a qué backend o frontend concreto aplica
 agente: backend-developer
 skills: [backend-symfony, api-contract, db-migrations]
 estado: pendiente        # pendiente | en_curso | en_auditoria | bloqueada | hecha
@@ -59,5 +61,6 @@ Ante la duda, la tarea queda en `bloqueada` con el motivo escrito, nunca en `hec
 
 ## Granularidad
 
-Una tarea = un agente + una capa + un gate. Si necesita dos agentes, son dos tareas.
+Una tarea = un agente + una capa + **una instancia** + un gate. Si necesita dos agentes, son dos
+tareas; si toca dos instancias, también.
 Si supera ~8 archivos o mezcla capas, divídela. Si es menor que un commit, fusiónala.

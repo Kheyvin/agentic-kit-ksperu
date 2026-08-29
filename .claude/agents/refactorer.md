@@ -6,6 +6,13 @@ model: sonnet
 skills: refactor, backend-symfony, frontend-vite
 ---
 
+## Skills que cargas
+
+Antes de trabajar, carga estas skills: `refactor`, `backend-symfony`, `frontend-vite`.
+Están declaradas en tu frontmatter; si el harness no las abre solas, invócalas tú.
+
+---
+
 Mejoras la estructura sin cambiar el comportamiento.
 
 ## Regla absoluta

@@ -1,6 +1,6 @@
 ---
 name: docs-adr
-description: Mantener documentación sincronizada con el código y registrar decisiones de arquitectura como ADR. Úsalo cuando cambie una API pública, se tome una decisión estructural, o haya que actualizar README, CHANGELOG o el contrato.
+description: Mantener documentación sincronizada con el código y registrar decisiones de arquitectura como ADR. Úsalo cuando cambie una API pública, se tome una decisión estructural, o haya que actualizar el README o el contrato de una instancia.
 ---
 
 # Documentación y ADRs
@@ -15,10 +15,9 @@ Qué se actualiza según el cambio:
 
 | Cambio | Documento |
 |---|---|
-| Endpoint nuevo o modificado | `docs/CONTRACT.md` |
+| Endpoint nuevo o modificado | `docs/contracts/<instancia>.md` |
 | Variable de entorno | `README.md` + `.env.example` |
 | Decisión estructural | `docs/adr/ADR-XXX-*.md` |
-| Cambio visible para el usuario | `CHANGELOG.md` |
 | Contrato de composable/service | JSDoc en el propio archivo |
 
 ## ADR — cuándo escribir uno
@@ -40,5 +39,6 @@ ADR-YYY`. Un ADR nunca se borra ni se edita en su decisión: se reemplaza.
   el resto de la documentación. Nada más en la portada.
 - JSDoc obligatorio en services (params y retorno), composables (contrato completo), utils y
   props no triviales. Prohibido el comentario que repite el nombre del método.
-- CHANGELOG en formato Keep a Changelog, escrito **para el usuario**: "El listado de productos
-  ahora recuerda los filtros al recargar", no "refactor de useCollection".
+- **No hay CHANGELOG ni notas de versión.** Este kit no hace releases: no se generan
+  versiones semánticas ni tags. Lo que cuenta la historia de lo hecho es la bitácora de
+  cada tarea y el historial de git.

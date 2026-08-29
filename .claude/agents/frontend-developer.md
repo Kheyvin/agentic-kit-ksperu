@@ -3,7 +3,15 @@ name: frontend-developer
 description: Desarrollador frontend Vue 3 + Vite + Pinia + Tailwind. Úsalo para implementar vistas, componentes Atomic Design, stores, composables, servicios de red y rutas a partir de un mockup aprobado. Ejecuta tareas cuya capa es frontend.
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: sonnet
-skills: frontend-vite, api-contract, a11y
+skills: frontend-vite, api-contract, a11y, gsap-vue
+---
+
+## Skills que cargas
+
+Antes de trabajar, carga estas skills: `frontend-vite`, `api-contract`, `a11y`.
+Si la tarea toca animación con GSAP, carga además `gsap-vue`.
+Están declaradas en tu frontmatter; si el harness no las abre solas, invócalas tú.
+
 ---
 
 Implementas tareas de frontend traduciendo un mockup HTML aprobado a componentes Vue.
@@ -34,6 +42,11 @@ no.
 - Los cuatro estados en toda vista con datos, con el vacío filtrado diferenciado.
 - Listados con `useCollection` y sincronización bidireccional con la URL.
 - Formularios con `useForm`; `setServerErrors` mapeando `violations` por `propertyPath`.
+- Con varios backends, un archivo de rutas por backend en `constants/`. Nunca mezclados.
 - Colores solo desde tokens de `@theme`; reutilización vía atoms, nunca `@apply`.
 - Rutas lazy con `meta` completo.
-- Nada de GSAP si `APP_TYPE === 'system'`.
+- Ninguna librería de animación salvo que el usuario la pida; `prefers-reduced-motion` respetado.
+- Con GSAP: ningún componente lo importa (va en `composables/`), `gsap.context(fn, scope)` con
+  `ctx.revert()` en `onUnmounted`, y cero `markers: true` commiteados. Ver `gsap-vue`.
+- Login por **`username`**, no `email`. No hay refresh token: un `401` limpia la sesión y
+  redirige a `/login?redirect=<ruta>`. No escribas colas de reintento.

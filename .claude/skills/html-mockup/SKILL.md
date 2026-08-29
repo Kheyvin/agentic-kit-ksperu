@@ -14,15 +14,15 @@ el repositorio. El mockup es el lugar donde se discute el diseño, no el código
 - Un archivo por pantalla: `docs/mockups/<slug>.html`. Autocontenido, abrible con doble clic.
 - Tailwind vía CDN (`<script src="https://cdn.tailwindcss.com"></script>`) **solo aquí**:
   el mockup es un artefacto de documentación, no entra al build.
-- Los tokens del mockup deben ser los mismos que los de `@theme` en `src/styles/main.css`.
+- Los tokens del mockup deben ser los mismos que los de `@theme` en `src/style.css`.
   Declara el bloque de tokens arriba del archivo para que el traspaso sea mecánico.
 - **Datos falsos pero realistas**: nombres largos que desbordan, precios de 6 cifras, listas
   de 20 filas. Los datos bonitos ocultan los bugs de layout.
 - Sin JavaScript de negocio. Como mucho, un `<script>` mínimo para alternar entre estados.
 
-## Los cuatro estados, siempre
+## Los cinco bloques, siempre
 
-Cada mockup muestra las cuatro variantes en la misma página, apiladas y rotuladas:
+Cada mockup muestra las cinco variantes en la misma página, apiladas y rotuladas:
 
 ```html
 <section data-state="loading">  <!-- skeletons -->

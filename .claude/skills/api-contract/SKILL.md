@@ -1,13 +1,25 @@
 ---
 name: api-contract
-description: Contrato API compartido entre el backend Symfony/API Platform y la SPA Vue — formatos, colecciones, errores RFC 7807, autenticación JWT, fechas e IRIs. Úsalo siempre que se diseñe, consuma o cambie un endpoint, y ante cualquier duda de formato entre las dos capas.
+description: Contrato API compartido entre un backend Symfony/API Platform y la SPA Vue que lo consume — formatos, colecciones, errores RFC 7807, autenticación JWT con username, fechas e IRIs. Úsalo siempre que se diseñe, consuma o cambie un endpoint, y ante cualquier duda de formato entre las dos capas.
 ---
 
 # Contrato API — fuente de verdad
 
-Este contrato es **idéntico** en backend y frontend. Vive en `docs/CONTRACT.md` dentro del
-proyecto; esta skill es el estándar del que se parte. **Cambiarlo exige ADR + dos tareas
-(backend y frontend) en el mismo lote.** Un cambio unilateral es un incidente, no un commit.
+**Un contrato por instancia de backend**, en `docs/contracts/<instancia>.md`:
+
+```
+docs/contracts/ventas_backend.md     ← lo consume cliente_frontend
+docs/contracts/admin_backend.md      ← lo consume admin_frontend
+docs/contracts/*.lock                ← hash vigilado por gate-contract.sh
+```
+
+Dos backends son **dos contratos independientes**. Que `ventas_backend` cambie la forma de sus
+errores no autoriza a cambiar la de `admin_backend`, y al revés. Cuando un frontend consume dos
+backends, cita en cada tarea **de qué contrato** viene cada endpoint.
+
+Esta skill es el estándar del que se parte; el archivo del proyecto es lo vinculante.
+**Cambiarlo exige ADR + una tarea de backend y otra de frontend en el mismo lote.** Un cambio
+unilateral es un incidente, no un commit.
 
 ## Generalidades
 
@@ -40,42 +52,47 @@ El frontend normaliza en un único punto: `normalizeCollection → { items, tota
   "violations": [ { "propertyPath": "name", "message": "..." } ] }
 ```
 
-Mapeo obligatorio: `400` malformado · `401` sin/mal token · `403` sin permiso (Voter) ·
-`404` no existe · `409` conflicto de negocio · `422` validación **siempre con `violations[]`** ·
-`500` opaco en producción.
+Mapeo obligatorio: `400` malformado · `401` sin token o token inválido · `403` sin permiso
+(Voter) · `404` no existe · `409` conflicto de negocio · `422` validación **siempre con
+`violations[]`** · `500` sin detalle interno.
 
 El frontend traduce a `AppError { status, code, message, fields }` con
 `400→VALIDATION, 401→UNAUTHORIZED, 403→FORBIDDEN, 404→NOT_FOUND, 409→CONFLICT, 422→VALIDATION,
 5xx→SERVER, sin respuesta→NETWORK`. `useForm.setServerErrors()` mapea `violations` por
 `propertyPath` a cada campo del formulario: **romper ese shape rompe todos los formularios**.
 
-## Autenticación
+## Autenticación — JWT con `username`
 
-- `POST /api/login_check` `{email, password}` → `200 { token, refresh_token }`; inválido → `401`.
-- `POST /api/token/refresh` `{refresh_token}` → nuevo par, rotativo (`single_use: true`).
-- `GET /api/me` → `{ id, email, roles, fullName }`, fuente autoritativa del perfil.
-- TTL: access `3600s`, refresh `2592000s` revocable en BD (logout real).
+El identificador de login es **`username`**, no `email`. Es lo que genera `make:user` en el
+bootstrap y lo que declara `username_path: username` en
+`config/packages/lexik_jwt_authentication.yaml`. Un frontend que envíe `email` recibe `401` sin
+explicación útil, y es el error de integración que más tiempo cuesta encontrar.
+
+- `POST /api/login_check` `{ "username": "...", "password": "..." }` → `200 { "token": "..." }`.
+  Credenciales inválidas → `401`, con mensaje genérico que no revela si el usuario existe.
+- `GET /api/me` → `{ id, username, roles }`, fuente autoritativa del perfil.
+- El token se manda en `Authorization: Bearer <token>`.
+- TTL del access token: `3600s`.
 - Roles: strings idénticos en backend y en `constants/enums.js` (`ROLE_USER`, `ROLE_ADMIN`).
 
-## Divergencia entre repositorios
+**No hay refresh token.** Cuando el token caduca, la petición devuelve `401`, el frontend limpia
+la sesión y manda a `/login?redirect=<ruta actual>`. No implementes colas de reintento, rotación
+ni `/api/token/refresh`: no existen en este kit. Si el usuario lo pide para un proyecto
+concreto, se añade con ADR y se documenta en el contrato de esa instancia.
 
-Si backend y frontend viven en repos separados, nada impide que uno cambie el contrato y el
-otro no se entere hasta que un formulario deje de pintar errores. Por eso existe el lock:
+## Divergencia entre contratos
 
 ```bash
 bash .claude/scripts/gate-contract.sh
 ```
 
-Guarda el hash de `docs/CONTRACT.md` en `docs/.contract.lock`. Los dos repos deben tener el
-mismo valor. Cuando cambies el contrato, el gate falla a propósito hasta que hayas escrito el
-ADR, creado las dos tareas y copiado el archivo al otro repositorio.
-
-En monorepo el gate sigue siendo útil —te avisa de que un cambio de contrato requiere ADR y
-dos tareas— pero el riesgo de divergencia física desaparece.
+Guarda el hash de cada `docs/contracts/<instancia>.md` en su `.lock` y falla **a propósito**
+cuando uno cambia, hasta que hayas escrito el ADR y creado las dos tareas hermanas. Con varias
+instancias, solo se pone en rojo la que cambió: las demás siguen en verde.
 
 ## Al añadir un endpoint
 
-1. Escribe la entrada en `docs/CONTRACT.md` **antes** de implementar: método, ruta, request,
-   response de éxito, y los códigos de error posibles con su forma exacta.
-2. Genera dos tareas hermanas que citen ese fragmento.
+1. Escribe la entrada en `docs/contracts/<instancia>.md` **antes** de implementar: método, ruta,
+   request, response de éxito, y los códigos de error posibles con su forma exacta.
+2. Genera dos tareas hermanas que citen ese fragmento, indicando la instancia.
 3. El test E2E del criterio de aceptación es lo que verifica que ambas coinciden.
