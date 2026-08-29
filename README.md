@@ -33,25 +33,10 @@ No hace falta `jq`: los hooks leen su entrada con PHP.
 En Windows, **Git Bash tiene que estar en el PATH** aunque tú trabajes en PowerShell. No lo
 usas tú: lo usa Claude Code para ejecutar los guardias y los gates.
 
-### Windows — PowerShell
-
-```powershell
-git clone https://github.com/Kheyvin/agentic-kit-ksperu.git $env:TEMP\agentic-kit-ksperu
-
-cd C:\ruta\de\tu\proyecto
-Copy-Item -Recurse "$env:TEMP\agentic-kit-ksperu\.claude" .
-Copy-Item          "$env:TEMP\agentic-kit-ksperu\CLAUDE.md" .
-```
-
-No hay `chmod` que hacer. Los scripts nunca se ejecutan por sí solos: siempre se invocan como
-`bash script.sh`, así que el permiso de ejecución da igual — en Windows y en cualquier sistema.
-
 ### Windows con Git Bash · Linux · macOS
 
 ```bash
 git clone https://github.com/Kheyvin/agentic-kit-ksperu.git /tmp/agentic-kit-ksperu
-
-cd /ruta/de/tu/proyecto
 cp -r /tmp/agentic-kit-ksperu/.claude ./
 cp    /tmp/agentic-kit-ksperu/CLAUDE.md ./
 ```
@@ -70,36 +55,6 @@ borra la copia y vuelve a clonar. El `.gitattributes` del kit ya lo evita, pero 
 a mano desde un ZIP puede traerlos.
 
 Cuando esté en verde, escribe `/iniciar-proyecto`.
-
-### Para recibir mejoras del kit
-
-Si prefieres engancharlo como submódulo en vez de copiarlo, así te llegan los cambios con
-un `git pull`:
-
-```bash
-git submodule add https://github.com/Kheyvin/agentic-kit-ksperu.git .agentic-kit-ksperu
-ln -s .agentic-kit-ksperu/.claude .claude
-cp .agentic-kit-ksperu/CLAUDE.md ./
-```
-
-`CLAUDE.md` se copia y no se enlaza: es el archivo donde anotas las reglas propias de
-**ese** proyecto, y no quieres que un `pull` del kit te las pise.
-
-**En Windows** el enlace simbólico es la parte incómoda. `ln -s` desde Git Bash suele crear una
-**copia** en lugar de un enlace, y entonces el submódulo deja de actualizarse sin avisar.
-Compruébalo con `ls -l .claude`: si no ves una flecha `->`, es una copia.
-
-Para que funcione de verdad necesitas el **Modo de desarrollador** de Windows activado
-(Configuración › Sistema › Para programadores) y entonces, desde PowerShell:
-
-```powershell
-git submodule add https://github.com/Kheyvin/agentic-kit-ksperu.git .agentic-kit-ksperu
-New-Item -ItemType SymbolicLink -Path .claude -Target .agentic-kit-ksperu\.claude
-Copy-Item .agentic-kit-ksperu\CLAUDE.md .
-```
-
-Si te da pereza, quédate con el método de copiar: para actualizar, repites el `Copy-Item` o el
-`cp -r` y ya está. Es menos elegante y funciona siempre.
 
 ---
 
