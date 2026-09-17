@@ -1,80 +1,49 @@
 # Instrucciones del proyecto
 
-Este proyecto usa el **Agentic Kit**: un equipo de subagentes con roles definidos.
-No improvises el proceso — sigue el protocolo.
+Este proyecto usa el **Agentic Kit**. Tú (la sesión principal) orquestas; los subagentes
+`backend-dev`, `frontend-dev`, `reviewer` y `qa` ejecutan. Comandos: `/iniciar` · `/planificar`
+· `/tarea` · `/revisar` · `/pruebas` · `/estado`.
 
-## Reglas duras
+## Reglas
 
-1. **Nunca escribas código sin una tarea.** Si no existe `docs/tasks/TASK-XXX.md` para lo que
-   se pide, invoca al `orchestrator` para que la cree primero.
-2. **El estado vive en disco, no en el chat.** Antes de responder cualquier "¿cómo vamos?",
-   lee `docs/state.yaml`. Después de cualquier cambio de estado, escríbelo ahí.
-3. **El contrato API manda, y hay uno por backend.** `docs/contracts/<instancia>.md` es la
-   fuente de verdad entre ese backend y el frontend que lo consume. Cambiarlo requiere ADR y
-   actualizar ambos lados en la misma tarea.
-4. **Delegación obligatoria.** Backend → `backend-developer`. Frontend → `frontend-developer`.
-   Esquema → `db-architect`. Revisión → `code-auditor`. No hagas tú el trabajo de un especialista.
-5. **Ningún trabajo se cierra sin gate en verde.** Ver `.claude/skills/task-spec/SKILL.md`.
-6. **Español** en documentación, historias, ADRs y comentarios. Código y nombres en inglés.
-7. **No asumas la estructura del proyecto.** Puede haber varios backends y varios frontends:
-   ejecuta `source .claude/scripts/paths.sh` y usa `$BACKENDS` y `$FRONTENDS`. Nunca escribas
-   `cd backend/` a ciegas. Si el layout sale `sin-inicializar`, **los gates se omiten y todo
-   parece verde sin haber comprobado nada**: arréglalo antes de seguir.
-8. **Esto es desarrollo y nada más.** No hay CI, ni Docker, ni despliegue, ni releases: no
-   generes CHANGELOG, versiones semánticas ni tags, y no propongas infraestructura. De subir el
-   proyecto se encarga el usuario. Los gates corren por hook en local y eso es todo lo que hay.
-9. **Entidades y migraciones se generan con comandos.** `make:entity` es interactivo: se le
-   pasan las respuestas por stdin. El hook bloquea crear entidades a mano y escribir en
-   `migrations/`.
+1. **Todo cambio de código pasa por una tarea** `docs/tasks/TASK-XXX.md` y la ejecuta un
+   subagente con `/tarea`. No escribas código de las instancias tú mismo. Para un arreglo
+   pequeño, crea la tarea con `.claude/templates/TASK.md` (objetivo + criterios, diez líneas) y
+   despáchala; no hace falta `/planificar`.
+2. **El estado es el frontmatter de las tareas.** `bash .claude/scripts/estado.sh` lo lee y
+   `estado.sh --marcar <id> <estado>` lo cambia. No lo lleves en la conversación.
+3. **Una tarea no se cierra sin gate en verde, y lo corres tú** después del subagente:
+   `bash .claude/scripts/gate-backend.sh <instancia>` o `gate-frontend.sh <instancia>`. Un solo
+   reintento; después, `bloqueada` y consulta al usuario. Nunca arregles el gate tú.
+4. **Lee poco.** Para orquestar te basta la tarea y la salida de los scripts. No leas el código
+   de las instancias ni las skills de estándares: eso lo hacen los subagentes en su contexto.
+5. **Contrato API por backend** en `docs/contracts/<instancia>.md`. Quien añade o cambia un
+   endpoint lo actualiza en la misma tarea.
+6. **Español** en documentación, tareas y comentarios; código y nombres en inglés.
+7. **Solo desarrollo**: sin CI, Docker, despliegue, releases ni CHANGELOG. Commit solo cuando el
+   usuario lo pida.
 
-## Decisiones del stack que no se renegocian
+## Stack fijado
 
-- **Base de datos: SQLite** en desarrollo (`DATABASE_URL="sqlite:///%kernel.project_dir%/var/data.db"`).
-  Si el usuario pide otro motor, avísale de que debe cambiar `.env`.
-- **Login por `username`**, no por `email`. Es lo que genera `make:user`.
-- **No hay refresh token.** El access dura una hora; al caducar, `401` → el frontend limpia la
-  sesión y va a `/login?redirect=<ruta>`. Nada de colas de reintento ni rotación.
-- `symfony/mailer`, `symfony/messenger` y `mercure` **se preguntan**, no se instalan por defecto.
-- **Sin librería de animación** por defecto: Tailwind y `<Transition>` de Vue. Si el usuario
-  pide GSAP, entra con ADR y manda la skill `gsap-vue`.
-
-## Árbol de documentación (lo crea `/iniciar-proyecto`)
-
-```
-docs/
-├── state.yaml              # índice único de historias y tareas — la "memoria"
-├── BRIEF.md                # qué se está construyendo y para quién
-├── contracts/<inst>.md     # contrato API por backend (fuente de verdad) + su .lock
-├── adr/ADR-XXX-*.md        # decisiones de arquitectura
-├── stories/STORY-XXX.yaml  # historias de usuario + criterios Gherkin
-├── tasks/TASK-XXX.md       # unidades de trabajo autocontenidas
-├── mockups/*.html          # bocetos HTML estáticos, previos al código Vue
-├── audits/AUDIT-XXX.md     # hallazgos de auditoría
-└── qa/                     # specs Playwright, capturas y reportes
-```
+SQLite en desarrollo (otro motor solo si el usuario lo pide) · login por `username` · sin
+refresh token (`401` → limpiar sesión → `/login?redirect=`) · Mailer, Messenger y Mercure solo
+si el usuario los pide · sin librería de animación salvo petición (GSAP → skill `gsap-vue`) ·
+migraciones solo con `make:migration` (el hook bloquea escribirlas a mano).
 
 ## Instancias
 
-El kit soporta **N backends y N frontends** con nombres arbitrarios. `paths.sh` los detecta
-solo: cualquier carpeta de primer nivel con `composer.json` + `src/` es un backend, y con
-`package.json` que dependa de `vue` es un frontend.
+N backends y N frontends; `paths.sh` los detecta (carpeta con `composer.json` + `src/` es
+backend; `package.json` con `vue` es frontend). Una sola de cada capa: `backend/` y
+`frontend/`. Varias: todas con prefijo (`ventas_backend`, `admin_frontend`). Cada tarea declara
+una `instancia:`.
 
-Convención de nombres: con una sola instancia de cada capa, `backend/` y `frontend/`. Con
-varias, **todas** llevan prefijo: `ventas_backend`, `admin_backend`, `cliente_frontend`,
-`admin_frontend`.
+## Documentos
 
-Cada tarea declara `instancia:`. Una tarea que no dice sobre qué backend trabaja no es
-autocontenida y no se despacha. Los gates aceptan la instancia como argumento:
-`bash .claude/scripts/gate-backend.sh ventas_backend`.
+`docs/BRIEF.md` (qué se construye y decisiones) · `docs/contracts/<inst>.md` ·
+`docs/tasks/TASK-XXX.md` (spec, criterios, estado y bitácora) · `docs/mockups/` (opcional).
+Nada más.
 
-Si una capa no está en el repositorio, su gate se omite en vez de fallar.
+## Al arrancar
 
-## Comandos
-
-`/iniciar-proyecto` · `/descubrimiento` · `/planificar` · `/maqueta` · `/tarea` · `/auditar` ·
-`/pruebas` · `/estado`
-
-## Arranque de sesión
-
-Al iniciar, lee `docs/state.yaml` y resume en 3 líneas: fase actual, tareas en curso,
-bloqueos. Si el archivo no existe, propón `/iniciar-proyecto`.
+El hook de sesión ya te da layout, instancias y resumen de tareas. No leas nada más hasta que
+el usuario pida algo.

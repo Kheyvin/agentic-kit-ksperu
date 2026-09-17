@@ -1,80 +1,33 @@
 ---
 id: TASK-XXX
-titulo:
-historia: STORY-XXX
-capa: backend            # backend | frontend | fullstack | docs | qa
-instancia: backend       # a qué backend o frontend concreto aplica
-agente: backend-developer
-skills: [backend-symfony, api-contract]
-estado: pendiente        # pendiente | en_curso | en_auditoria | bloqueada | hecha
-depende_de: []
-archivos_permitidos:
-  - src/...
-gates: [gate-backend]
-mockup:                  # obligatorio si capa incluye frontend
+titulo: 
+instancia: backend          # carpeta de la instancia sobre la que se trabaja (una sola)
+agente: backend-dev         # backend-dev | frontend-dev
+estado: pendiente           # pendiente | en_curso | bloqueada | hecha  (se cambia con estado.sh --marcar)
+depende_de: []              # [TASK-001]
+revision: no                # sí → al terminar pasa por el reviewer (login, permisos, datos personales, dinero, borrado)
 ---
 
 # TASK-XXX — <título>
 
 ## Objetivo
+Una frase: qué existe al terminar que no existía antes.
 
-Una frase: qué existe al terminar esta tarea que no existía antes.
+## Contexto
+Solo lo que no se deduce del código: decisiones tomadas, restricciones, qué ya existe y se
+reutiliza (con su ruta). Quien ejecuta esto no ha visto ninguna conversación. Máximo 15 líneas.
 
-## Contexto necesario
-
-Todo lo que el agente necesita saber. **Autocontenido**: quien ejecuta esta tarea no tiene
-historial de conversación ni conoce el proyecto.
-
-- Historia de origen y por qué importa.
-- Estado actual del código relevante (qué ya existe, qué no).
-- Decisiones ya tomadas que condicionan esta tarea (con el ADR si aplica).
-
-## Fragmento del contrato API
-
-Copia aquí, literal, la parte de `docs/contracts/<instancia>.md` que aplica. La redundancia es deliberada:
-elimina la dependencia de que el agente encuentre el archivo correcto.
-
-```
-GET /api/... 
-Request:  ...
-200:      { ... }
-Errores:  401 · 403 · 422 con violations[]
-```
-
-## Alcance
-
-**Incluye**
-- ...
-
-**No incluye** (esto va en otra tarea)
-- ...
+## Contrato
+Fragmento literal de `docs/contracts/<instancia>.md` que aplica (endpoints, campos, errores).
+Si la tarea añade o cambia endpoints, el agente actualiza el contrato en esta misma tarea.
+Si no toca la API: "Sin cambios de contrato".
 
 ## Criterios de aceptación
-
-- [ ] AC-1 — verificable, observable desde fuera
+- [ ] AC-1 — observable desde fuera: una petición y su respuesta, o lo que ve el usuario
 - [ ] AC-2 —
-- [ ] AC-3 —
 
-## Cómo se verifica
-
-```bash
-# comandos exactos que prueban que funciona
-bash .claude/scripts/gate-backend.sh
-```
-
-## Gate
-
-Debe salir en verde antes de cerrar. Si no lo hace, la tarea queda `bloqueada`, nunca `hecha`.
-
----
+## Fuera de alcance
+- 
 
 ## Bitácora
-
-> La escribe el agente que ejecuta. Sin esto, la tarea no se cierra.
-
-- **Ejecutada por:** 
-- **Fecha:** 
-- **Archivos tocados:** 
-- **Decisiones tomadas:** 
-- **Gate:** verde / rojo — salida relevante
-- **Pendiente o deuda generada:** 
+<!-- La escribe el agente al terminar: archivos tocados · decisiones · resultado del gate · pendientes o dudas. -->

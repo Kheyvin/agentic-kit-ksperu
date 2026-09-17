@@ -26,7 +26,7 @@ En un ERP, un CRM o un panel de gestión, la respuesta correcta casi siempre es 
 la animación de más ralentiza la navegación que alguien hace cincuenta veces al día. En una
 landing o un portfolio, sí.
 
-Si decides que entra, **regístralo en un ADR** con el motivo. No se instala "por si acaso".
+Si decides que entra, **anótalo en la lista de Decisiones de `docs/BRIEF.md`** con el motivo. No se instala "por si acaso".
 
 ```bash
 npm install gsap
@@ -86,7 +86,7 @@ onUnmounted(() => mm.revert())
 
 ## Reglas de oro
 
-1. GSAP solo si se pidió y hay ADR. Por defecto, Tailwind y `<Transition>`.
+1. GSAP solo si se pidió y está anotado en Decisiones del BRIEF. Por defecto, Tailwind y `<Transition>`.
 2. **Ningún componente importa `gsap`.** Todo pasa por `composables/`.
 3. Import dinámico: GSAP no entra en el bundle inicial.
 4. Animaciones creadas en `onMounted`, nunca antes: los selectores necesitan DOM.

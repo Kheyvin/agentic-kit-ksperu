@@ -10,7 +10,7 @@ Documentación oficial: <https://gsap.com/docs/v3/>
 
 ## 1. Instalación y registro
 
-GSAP **no viene instalado**. Solo entra si el usuario lo pide y queda un ADR que lo justifique
+GSAP **no viene instalado**. Solo entra si el usuario lo pide y queda anotado en Decisiones de `docs/BRIEF.md`
 (ver `SKILL.md`, sección "GSAP es opcional y se pide").
 
 ```bash
@@ -432,7 +432,7 @@ Además:
 
 ## 10. Checklist de aceptación
 
-- [ ] GSAP está instalado porque se pidió, y hay un ADR que lo justifica.
+- [ ] GSAP está instalado porque se pidió, y está anotado en Decisiones de `docs/BRIEF.md`.
 - [ ] Ningún componente importa `gsap`; todo pasa por `composables/`.
 - [ ] La carga es dinámica y el bundle inicial sigue bajo presupuesto.
 - [ ] `gsap.registerPlugin()` se ejecuta una vez, no en cada montaje.
